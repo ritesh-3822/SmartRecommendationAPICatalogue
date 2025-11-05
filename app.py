@@ -20,6 +20,8 @@ IDS_PATH = "/tmp/api_ids.npy"
 
 app = FastAPI()
 
+
+#---------------MiddleWare-------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -131,14 +133,21 @@ def search(req: SearchRequest):
     q = embed([req.api_description])
     scores, idx = index.search(q, k)
 
-    results = [
-        {"api_id": api_ids[i], "semantic_score": round(float(scores[0][j]))}
-        for j, i in enumerate(idx[0])
-    ]
+    # Convert to float and filter out low/zero scores
+    results = []
+    for j, i in enumerate(idx[0]):
+        score = float(scores[0][j])
+        # Filter out very low semantic scores (e.g., below 0.1)
+        if score > 0.1:
+            results.append({
+                "api_id": api_ids[i],
+                "semantic_score": round(score, 3)  # keep 3-decimal precision
+            })
 
     return {"results": results}
 
-#---------- Stats ----------
+
+#---------- Stats -------------
 @app.get("/stats")
 def stats():
     return {
@@ -147,4 +156,3 @@ def stats():
         "index_path": INDEX_PATH,
         "ids_path": IDS_PATH,
     }
-
