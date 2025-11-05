@@ -81,10 +81,13 @@ class SearchRequest(BaseModel):
     closest_k_apis: int = 5
 
 # ---------- Routes ----------
+
+#---------- Health Check ----------
 @app.get("/health")
 def health():
     return {"status": "ok", "vectors": len(api_ids), "model": MODEL_NAME}
 
+#---------- Upsert APIs ----------
 @app.post("/upsert")
 def upsert(req: UpsertRequest):
     global index, api_ids
@@ -118,6 +121,7 @@ def upsert(req: UpsertRequest):
     save_state()
     return {"status": "upsert", "added": len(new_items)}
 
+#---------- Search APIs ----------
 @app.post("/search")
 def search(req: SearchRequest):
     if len(api_ids) == 0:
@@ -128,9 +132,19 @@ def search(req: SearchRequest):
     scores, idx = index.search(q, k)
 
     results = [
-        {"api_id": api_ids[i], "semantic_score": float(scores[0][j])}
+        {"api_id": api_ids[i], "semantic_score": round(float(scores[0][j]))}
         for j, i in enumerate(idx[0])
     ]
 
     return {"results": results}
+
+#---------- Stats ----------
+@app.get("/stats")
+def stats():
+    return {
+        "total_apis": len(api_ids),
+        "model": MODEL_NAME,
+        "index_path": INDEX_PATH,
+        "ids_path": IDS_PATH,
+    }
 
